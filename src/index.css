@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FAF6F1;
+  --color-paper: #FFFDF9;
+  --color-ink: #141210;
+  --color-line: #E7DFD6;
+  --color-moss: #2E4034;
+  --color-deep: #1C2620;
+  --color-ember: #E4572E;
+  --color-saffron: #F3B04C;
+  --color-sage: #8A9B8E;
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { -webkit-font-smoothing: antialiased; }
+body { background: var(--color-cream); color: var(--color-ink); font-family: var(--font-sans); }
+::selection { background: var(--color-ember); color: #FFF6EF; }
+
+.grain::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .5; z-index: 1;
+  background-image: radial-gradient(#14121008 1px, transparent 1px); background-size: 5px;
+}
+.grain > * { position: relative; z-index: 2; }
+
+.card-soft { box-shadow: 0 1px 2px rgba(20,18,16,.05), 0 24px 48px -24px rgba(20,18,16,.25); }
+
+.step-card { transition: transform .5s cubic-bezier(.2,.9,.25,1), box-shadow .5s; }
+.step-card:hover { transform: translateY(-6px); }
+
+.codeblock { background: #1C2620; color: #EDE7DF; }
+
+.schema-table { transition: border-color .3s, transform .3s; }
+.schema-table:hover { border-color: var(--color-ember); transform: translateY(-4px); }
+
+.flow-arrow { stroke-dasharray: 4 6; animation: dashmove 22s linear infinite; }
+@keyframes dashmove { to { stroke-dashoffset: -480; } }
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }
+
+.tabbtn { transition: all .35s cubic-bezier(.2,.9,.25,1); }
+.tabbtn.active { background: var(--color-ink); color: var(--color-cream); }
+
+html { scroll-behavior: smooth; }
+
+.glow { box-shadow: 0 0 0 1px rgba(228,87,46,.35), 0 24px 60px -20px rgba(228,87,46,.45); }

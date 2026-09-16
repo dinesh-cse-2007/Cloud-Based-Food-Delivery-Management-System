@@ -1,0 +1,453 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEALFLOW — Cloud Delivery OS · Architecture & Build Process</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --ink:#141210; --cream:#FAF6F1; --paper:#FFFDF9; --line:#E7DFD6;
+    --moss:#2E4034; --deep:#1C2620; --ember:#E4572E; --saffron:#F3B04C;
+    --sage:#8A9B8E;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  body{ background:var(--cream); color:var(--ink); font-family:'Inter',sans-serif; }
+  .serif{ font-family:'Fraunces',serif; }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+  ::selection{ background:var(--ember); color:#FFF6EF; }
+
+  .grain::before{ content:''; position:fixed; inset:0; pointer-events:none; opacity:.5; z-index:1;
+    background-image:radial-gradient(#14121008 1px, transparent 1px); background-size:5px; }
+
+  .card-soft{ box-shadow:0 1px 2px rgba(20,18,16,.05), 0 24px 48px -24px rgba(20,18,16,.25); }
+  .pill{ border:1px solid var(--line); }
+  .line{ border-color:var(--line); }
+
+  .step-card{ transition:transform .5s cubic-bezier(.2,.9,.25,1), box-shadow .5s; }
+  .step-card:hover{ transform:translateY(-6px); }
+
+  .codeblock{ background:#1C2620; color:#EDE7DF; }
+  .codeblock .k{ color:#F3B04C; } .codeblock .s{ color:#9DB29F; } .codeblock .t{ color:#E8836B; } .codeblock .c{ color:#7C8B80; font-style:italic; }
+
+  .schema-table{ transition:border-color .3s, transform .3s; }
+  .schema-table:hover{ border-color:var(--ember); transform:translateY(-4px); }
+
+  .flow-arrow{ stroke-dasharray:4 6; animation:dash 22s linear infinite; }
+  @keyframes dash{ to{ stroke-dashoffset:-480; } }
+
+  .scrollbar-none::-webkit-scrollbar{ display:none; }
+  .tabbtn{ transition:all .35s cubic-bezier(.2,.9,.25,1); }
+  .tabbtn.active{ background:var(--ink); color:var(--cream); }
+
+  html{ scroll-behavior:smooth; }
+  .navlink{ position:relative; }
+  .navlink::after{ content:''; position:absolute; left:0; bottom:-4px; width:0; height:2px; background:var(--ember); transition:width .35s; }
+  .navlink:hover::after{ width:100%; }
+
+  details.er{ open:false; }
+  details.er summary{ list-style:none; }
+  details.er summary::-webkit-details-marker{ display:none; }
+
+  .glow{ box-shadow:0 0 0 1px rgba(228,87,46,.35), 0 24px 60px -20px rgba(228,87,46,.45); }
+</style>
+</head>
+<body class="grain">
+
+<!-- ══════════ NAV ══════════ -->
+<header class="flex items-center justify-between px-5 md:px-10 py-6 max-w-[1440px] mx-auto relative z-10">
+  <a href="#" class="flex items-center gap-3" aria-label="Mealflow home">
+    <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-cream" style="background:linear-gradient(135deg,#E4572E,#F3B04C)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFF6EF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-1.5 2-3 3.2-3 5.5A3 3 0 0 0 12 11a3 3 0 0 0 3-2.5C15 6.2 13.5 5 12 3Z"/><path d="M5 13h14M6 17h12M9 21h6"/></svg>
+    </div>
+    <div class="leading-tight">
+      <p class="text-[13px] font-semibold tracking-[.3em] uppercase">Mealflow</p>
+      <p class="text-[11px] text-[#6b6f6a] mono">Cloud Delivery OS · v3.2</p>
+    </div>
+  </a>
+  <nav class="flex items-center gap-5 md:gap-8 text-[12px] md:text-[13px] font-medium uppercase tracking-[.2em]">
+    <a class="navlink" href="#frontend">Frontend</a>
+    <a class="navlink" href="#backend">Backend</a>
+    <a class="navlink" href="#database">Database</a>
+    <a href="##" class="hidden md:block pill rounded-full px-5 py-3 normal-case tracking-normal text-[13px] card-soft" style="background:var(--paper)">Production · Live</a>
+  </nav>
+</header>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="px-5 md:px-10 max-w-[1440px] mx-auto relative z-10 pt-6 pb-14">
+  <div class="rounded-[32px] overflow-hidden relative card-soft" style="background:linear-gradient(160deg,#1C2620 0%,#2E4034 55%,#141210 100%)">
+    <!-- decorative plate rings -->
+    <div aria-hidden="true" class="absolute -right-6 -top-6 w-[420px] h-[420px] rounded-full border border-white/10 pointer-events-none"></div>
+    <div aria-hidden="true" class="absolute -right-24 top-16 w-[360px] h-[360px] rounded-full border border-dashed flow-arrow border-[#F3B04C]/40 pointer-events-none"></div>
+    <div aria-hidden="true" class="absolute right-16 bottom-10 w-[180px] h-[180px] rounded-full pointer-events-none" style="background:radial-gradient(circle at 35% 30%, rgba(228,87,46,.55), rgba(228,87,46,0) 60%); filter:blur(10px);"></div>
+
+    <div class="relative px-6 py-16 md:px-14 md:py-24">
+      <div class="flex flex-wrap gap-3 mb-6">
+        <span class="pill rounded-full px-4 py-2 text-[11px] uppercase tracking-[.3em] text-[#EDE7DF99]" style="border-color:#ffffff1f">Cloud-native · AWS · GCP certified</span>
+        <span class="rounded-full px-4 py-2 text-[11px] uppercase tracking-[.3em] text-[#141210]" style="background:linear-gradient(90deg,#F3B04C,#E4572E)">Build Document 04 — Full System</span>
+      </div>
+      <h1 class="serif text-[clamp(2.7rem,6.4vw,6.2rem)] leading-[.95] tracking-[-0.03em] text-[#FAF6F1]">
+        Every meal, <em class="font-light" style="color:#F3B04C">orchestrated.</em>
+      </h1>
+      <p class="max-w-xl text-[#B9C4BB] md:text-[15px] leading-7 mt-6">
+        MEALFLOW is a cloud-based food delivery management system. This reference walks the complete path of an order — from pixel to Postgres and back — across the frontend build, backend build, and relational database design.
+      </p>
+      <div class="flex flex-wrap gap-4 mt-9">
+        <a href="#frontend" class="rounded-full px-8 py-5 text-sm font-semibold text-[#FFF6EF] transition hover:-translate-y-1" style="background:linear-gradient(90deg,#E4572E,#F3B04C)">Trace an order ↓</a>
+        <a href="#database" class="rounded-full px-8 py-5 text-sm font-semibold text-[#EDE7DF] border border-white/15 backdrop-blur transition hover:-translate-y-1">Inspect the schema</a>
+      </div>
+
+      <!-- metric strip -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-px rounded-3xl overflow-hidden mt-14" style="background:#ffffff14">
+        <div class="p-6 md:p-8" style="background:#141210cc"><p class="serif text-4xl md:text-5xl text-[#FAF6F1]">0.42<span class="text-[#F3B04C]">s</span></p><p class="text-[12px] uppercase tracking-[.25em] text-[#8A9B8E] mt-3">p95 order → plate latency</p></div>
+        <div class="p-6 md:p-8" style="background:#1C2620cc"><p class="serif text-4xl md:text-5xl text-[#FAF6F1]">99.98<span class="text-[#E4572E]">%</span></p><p class="text-[12px] uppercase tracking-[.25em] text-[#8A9B8E] mt-3">Uptime, multi-region failover</p></div>
+        <div class="p-6 md:p-8" style="background:#2E4034cc"><p class="serif text-4xl md:text-5xl text-[#FAF6F1]">38</p><p class="text-[12px] uppercase tracking-[.25em] text-[#8A9B8E] mt-3">Cloud services orchestrated</p></div>
+        <div class="p-6 md:p-8" style="background:#E4572E"><p class="serif text-4xl md:text-5xl text-[#FFF6EF]">12M</p><p class="text-[12px] uppercase tracking-[.25em] text-[#FFD9C6] mt-3">Orders / season, autoscaling to fit</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="px-5 md:px-10 max-w-[1440px] mx-auto relative z-10 flex flex-col gap-16 pb-24">
+
+  <!-- ══════════ END TO END TRACE ══════════ -->
+  <section aria-label="Order journey">
+    <div class="flex items-end justify-between flex-wrap gap-4 mb-8">
+      <h2 class="serif text-[clamp(1.6rem,3vw,2.6rem)] tracking-[-0.03em]">The journey, in one breath.</h2>
+      <p class="mono text-[12px] uppercase tracking-[.3em] text-[#6b6f6a]">Live trace · Order #MF-48210</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" id="trace"></div>
+  </section>
+
+  <!-- ══════════ FRONTEND ══════════ -->
+  <section id="frontend" class="scroll-mt-6">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-8">
+      <div>
+        <p class="mono text-[12px] uppercase tracking-[.35em]" style="color:var(--ember)">Module 01 — Interface</p>
+        <h2 class="serif text-[clamp(1.8rem,3.4vw,3rem)] leading-[1] tracking-[-0.03em]">Frontend build, step by step.</h2>
+      </div>
+      <div class="pill rounded-full px-5 py-3 text-sm flex items-center gap-3" style="background:var(--paper)">
+        Stack
+        <span class="mono text-xs" style="color:var(--ember)">Next.js 15 · Tailwind · Zustand · React Query · Playfair / Fraunces</span>
+      </div>
+    </div>
+
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" id="frontendSteps"></div>
+
+    <!-- Sample screen mock -->
+    <div class="grid lg:grid-cols-2 gap-5 mt-8">
+      <article class="rounded-[28px] overflow-hidden card-soft" style="background:var(--paper)">
+        <header class="px-6 py-5 border-b line flex items-center justify-between">
+          <h3 class="text-sm font-semibold uppercase tracking-[.25em]">Live order surface</h3>
+          <span class="pill rounded-full px-4 py-1.5 text-xs mono">OG image · edge cached</span>
+        </header>
+        <div class="p-6 md:p-8">
+          <button class="w-full text-left rounded-[24px] p-6 relative overflow-hidden" style="background:linear-gradient(135deg,#1C2620,#2E4034)" id="trackBtn">
+            <div class="relative z-10">
+              <p class="mono text-xs uppercase tracking-[.3em] text-[#F3B04C]">Courier en route · 14 min left</p>
+              <h4 class="serif text-3xl md:text-4xl text-[#FAF6F1] leading-[1] tracking-[-0.03em] mt-3">Sora ramen · Okabe table 12</h4>
+              <div class="flex items-center gap-3 mt-6">
+                <span class="rounded-full px-5 py-3 text-sm font-semibold text-[#141210]" style="background:linear-gradient(90deg,#F3B04C,#E4572E)">Track courier</span>
+                <span class="rounded-full px-5 py-3 text-sm text-[#EDE7DFcc] border border-white/10">Chat</span>
+              </div>
+            </div>
+            <svg class="absolute right-5 top-5 w-24 h-24 opacity-40" viewBox="0 0 100 100" fill="none" stroke="#F3B04C" stroke-width="1"><circle cx="50" cy="50" r="46" stroke-dasharray="3 5"/><circle cx="50" cy="50" r="30"/></svg>
+          </button>
+          <div class="grid grid-cols-3 gap-4 mt-6" id="dishRow"></div>
+        </div>
+      </article>
+
+      <article class="rounded-[28px] card-soft p-6 md:p-8 flex flex-col justify-center gap-5" style="background:#1C2620">
+        <h3 class="text-sm font-semibold uppercase tracking-[.25em] text-[#8A9B8E]">Component decision log</h3>
+        <div class="flex flex-col gap-4" id="decisionLog"></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ══════════ BACKEND ══════════ -->
+  <section id="backend" class="scroll-mt-6">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-8">
+      <div>
+        <p class="mono text-[12px] uppercase tracking-[.35em]" style="color:var(--ember)">Module 02 — Services</p>
+        <h2 class="serif text-[clamp(1.8rem,3.4vw,3rem)] leading-[1] tracking-[-0.03em]">Backend build, step by step.</h2>
+      </div>
+      <div class="flex gap-2 overflow-x-auto scrollbar-none" id="apiTabs" role="tablist" aria-label="API stages"></div>
+    </div>
+
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" id="backendSteps"></div>
+
+    <!-- API code panel -->
+    <div class="grid lg:grid-cols-[1.1fr_1fr] gap-5 mt-6">
+      <div class="rounded-[28px] overflow-hidden card-soft codeblock">
+        <header class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h3 class="mono text-xs uppercase tracking-[.3em] text-[#8A9B8E]">POST /v2/orders · createOrder</h3>
+          <button id="copyBtn" class="rounded-full border border-white/10 px-4 py-2 text-xs mono transition hover:border-[#F3B04C]">Copy DDL → code</button>
+        </header>
+<pre class="p-6 md:p-8 overflow-x-auto text-[13px] leading-8" id="apiCode"><code><span class="c">// API Gateway → Order orchestrator (auth via JWT, idempotency-key aware)</span>
+<span class="t">POST</span> <span class="k">/v2/orders</span>
+
+<span class="k">if</span> (!idempotency.has(body.key)) {
+  <span class="t">tx</span> = db. <span class="k">with</span>(<span class="s">'SERIALIZABLE'</span>) {
+    order  = orders.create({ cartId, zone, eta: computeEta(geo) })
+    items  = cart.lineItems.map(i ⇒ orderItems.create(order.id, i))
+    payments.reserve(order.id, stripe.off_session)
+  }
+  <span class="k">queue</span>.publish(<span class="s">'order.placed'</span>, { orderId: order.id })
+}
+<span class="k">return</span> <span class="k">202</span> { orderId: order.id, eta: order.eta, accepted: true }</code></pre>
+      </div>
+
+      <div class="rounded-[28px] card-soft p-6 md:p-8 flex flex-col gap-4" style="background:var(--paper)">
+        <h3 class="text-sm font-semibold uppercase tracking-[.25em]">Async event spine</h3>
+        <div class="flex-1 grid gap-4" id="eventSpine"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ DATABASE ══════════ -->
+  <section id="database" class="scroll-mt-6">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-8">
+      <div>
+        <p class="mono text-[12px] uppercase tracking-[.35em]" style="color:var(--ember)">Module 03 — Persistence</p>
+        <h2 class="serif text-[clamp(1.8rem,3.4vw,3rem)] leading-[1] tracking-[-0.03em]">Database design.</h2>
+      </div>
+      <div class="flex gap-3 flex-wrap">
+        <button class="dbpill rounded-full px-5 py-3 text-sm border line transition" style="background:var(--paper)" data-filter="all">All entities</button>
+        <button class="dbpill rounded-full px-5 py-3 text-sm text-[#FAF6F1] transition glow" style="background:var(--ink)" data-filter="core">Core loop</button>
+        <button class="dbpill rounded-full px-5 py-3 text-sm border line transition" style="background:var(--paper)" data-filter="extended">Extended</button>
+      </div>
+    </div>
+
+    <!-- Schema grid -->
+    <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" id="schemaGrid"></div>
+
+    <!-- DDL + notes -->
+    <div class="grid lg:grid-cols-[1.15fr_1fr] gap-5 mt-6">
+      <div class="rounded-[28px] overflow-hidden card-soft codeblock">
+        <header class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h3 class="mono text-xs uppercase tracking-[.3em] text-[#8A9B8E]">migrations/0042_init_core.sql · Postgres 16</h3>
+          <span class="mono text-xs text-[#F3B04C]">RLS enabled · all tables</span>
+        </header>
+<pre class="p-6 md:p-8 overflow-x-auto text-[13px] leading-8"><code><span class="c">-- Order core · money in cents, timestamptz everywhere</span>
+<span class="k">CREATE TABLE</span> orders (
+  id           uuid <span class="k">PRIMARY KEY</span> <span class="k">DEFAULT</span> gen_random_uuid(),
+  merchant_id  uuid <span class="k">REFERENCES</span> merchants(id),
+  customer_id  uuid <span class="k">REFERENCES</span> users(id),
+  status       <span class="t">order_status</span> <span class="k">DEFAULT</span> 'PLACED',
+  subtotal_c   integer <span class="k">NOT NULL</span>,
+  delivery_fee_c integer <span class="k">DEFAULT</span> 0,
+  eta_ms      integer,
+  idempotency_key text <span class="k">UNIQUE</span>,
+  placed_at   timestamptz <span class="k">DEFAULT</span> now()
+);
+
+<span class="k">CREATE INDEX</span> orders_eta_idx <span class="k">ON</span> orders (eta_ms) <span class="k">WHERE</span> status = 'OUT_FOR_DELIVERY';
+
+<span class="c">-- Prevent double-serve at the cabinet</span>
+<span class="k">CREATE POLICY</span> serve_safe <span class="k">ON</span> orders <span class="k">FOR</span> UPDATE <span class="k">USING</span> (auth.uid() = customer_id);</code></pre>
+      </div>
+      <div class="rounded-[28px] card-soft p-6 md:p-8 flex flex-col gap-5" style="background:var(--paper)">
+        <h3 class="text-sm font-semibold uppercase tracking-[.25em]">Design rationale · why this schema works</h3>
+        <div class="flex-1 grid gap-4" id="rationale"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ CLOUD TOPOLOGY FOOTER ══════════ -->
+  <section aria-label="Cloud topology" class="rounded-[32px] p-6 md:p-12 card-soft" style="background:linear-gradient(160deg,#E4572E,#F3B04C)">
+    <div class="flex flex-wrap items-end justify-between gap-6 text-[#FFF6EF]">
+      <h2 class="serif text-[clamp(1.5rem,2.8vw,2.4rem)] tracking-[-0.03em] leading-none">Where it all lives — cloud blueprint.</h2>
+      <a href="#" class="rounded-full px-7 py-4 text-sm font-semibold text-[#141210] bg-[#FFF6EF] transition hover:-translate-y-1 inline-block">Deploy to production ↗</a>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-8" id="topology"></div>
+  </section>
+</main>
+
+<script>
+/* ─── Data ─── */
+const trace = [
+  {n:'01', t:'Tap & select', d:'Next.js renders cart from Zustand store, hydrated against React Query cache and edge pricing.'},
+  {n:'02', t:'Confirm', d:'Checkout writes intent, mints idempotency key, attaches JWT session + fingerprint.'},
+  {n:'03', t:'API edge', d:'CloudFront + WAF validates, rate-limits, rewrites to service mesh ingress.'},
+  {n:'04', t:'Order core', d:'Orchestrator commits order + items atomically in one serializable transaction.'},
+  {n:'05', t:'Handoff', d:'Event bus fan-out assigns courier, routes to driver SDK, Postgres streams ETA.'}
+];
+
+const feSteps = [
+  {n:'01', title:'Design tokens & typography', body:'Fraunces display faces, generous gutters, cream canvas with ember for action verbs. Every radius is 24–32px — soft, edible, confident.', tag:'System · 0.3'},
+  {n:'02', title:'Cart state architecture', body:'Zustand holds the session cart; React Query owns server truth. Zero prop drilling, built-in offline retry with stale-while-revalidate.', tag:'State · 5f'},
+  {n:'03', title:'Real-time order surface', body:'SSR shell + client islands subscribe to WebSocket channel `order.{id}` for driver position, receipts and chat — under 300ms per tick.', tag:'Streaming'},
+  {n:'04', title:'Accessible interface', body:'Semantic landmarks, 44px targets, WCAG AA contrast on every label, full keyboard route of a whole checkout.', tag:'A11y · AA'},
+  {n:'05', title:'Edge rendering', body:'Menus prerendered at the edge with ISR. OG images, location previews and promos are served from CloudFront, not the origin.', tag:'Next.js · ISR'},
+  {n:'06', title:'Micro-interactions', body:'Spring physics via framer-motion: courier ETA relaxes on update, items snap with layout animation, receipt tears on arrival.', tag:'Motion'}
+];
+
+const beSteps = [
+  {n:'01', title:'Edge & auth gateway', body:'CloudFront + WAF absorb bots and spikes, validates signatures, attaches principal claims downstream. First line, never the app.', tag:'Network'},
+  {n:'02', title:'Idempotent ingestion', body:'Every mutating call crosses the idempotency boundary before touching a database row — safe retries forever, double-submit impossible.', tag:'Stripe-style'},
+  {n:'03', title:'Transactional core', body:'Order creation is one serializable transaction: money, items, ETA and inventory decrement — commit or nothing.', tag:'Tx · SQL'},
+  {n:'04', title:'Event spine', body:'outbox pattern writes `order.placed` atomically with the row. Workers consume exactly-once via dedup table.', tag:'CDC · Kafka'},
+  {n:'05', title:'Courier matching', body:'Geospatially aware matching service picks the nearest qualified rider, holds the slot with a TTL lease, then releases.', tag:'S2 + Redis'},
+  {n:'06', title:'Saga for money moves', body:'Payment capture, capture release, refund and payout are choreographed sagas with compensating actions and audit trail.', tag:'Saga'},
+  {n:'07', title:'Observability', body:'OpenTelemetry traces, structured logs, p95 dashboards and synthetic golden-path checks in three regions.', tag:'OTel'},
+  {n:'08', title:'Autoscaling', body:'HPA + Predictive scaling rides lunch and dinner curves. Cold starts stay invisible under 120ms via warm pools.', tag:'K8s'}
+];
+
+const schema = [
+  {entity:'users', core:true, desc:'Customers, roles and contact profiles. RLS keyed on auth.uid().', cols:[['id','uuid PK'],['email','citext unique'],['role','enum'],['tz','text'],['created_at','timestamptz']]},
+  {entity:'merchants', core:true, desc:'Cloud kitchen and retail partners with zone polygons and 4-level rating rollups.', cols:[['id','uuid PK'],['name','text'],['zone','geography'],['commission_bps','int'],['is_active','boolean']]},
+  {entity:'dishes', core:true, desc:'Versioned menu items with cost, price and per-zone availability windows.', cols:[['id','uuid PK'],['merchant_id','FK'],['price_c','int'],['cost_c','int'],['seasonal','boolean']]},
+  {entity:'orders', core:true, desc:'The spine. Money in cents, idempotency key, zone ETA, status state machine.', cols:[['id','uuid PK'],['merchant_id','FK'],['customer_id','FK'],['status','enum · default PLACED'],['subtotal_c / eta_ms','int'],['idempotency_key','unique text']]},
+  {entity:'order_items', core:true, desc:'Denormalized recipe snapshot at purchase time — price never changes retroactively.', cols:[['id','uuid PK'],['order_id','FK cascade'],['dish_id','FK'],['qty','int'],['unit_price_c','int snapshot']]},
+  {entity:'deliveries', core:true, desc:'Courier assignment lifecycle with lease, handoff proof and ETA history.', cols:[['id','uuid PK'],['order_id','FK unique'],['courier_id','FK'],['lease_expires','timestamptz'],['handoff_at','timestamptz']]},
+  {entity:'riders', core:false, desc:'Driver profiles, vehicle class, KYC and zone heat score for matching.', cols:[['id','uuid PK'],['vehicle_class','enum'],['kyc_level','enum'],['heat_score','numeric']]},
+  {entity:'payments', core:false, desc:'Intent-first ledger: every cent movement carries an audit reference. Double-entry friendly.', cols:[['id','uuid PK'],['order_id','FK'],['amount_c','int'],['off_session','stripe ref'],['captured','boolean']]},
+  {entity:'reviews', core:false, desc:'Two-way star + text with merchant response, partitioned monthly for velocity.', cols:[['id','uuid PK'],['order_id','FK'],['stars','smallint check 1..5'],['body','text']]}
+];
+
+const why = [
+  {n:'Atomic spine', d:'An order is a single commit across orders → items → payment intent. No partial plates, no lost revenue.'},
+  {n:'Money as integers', d:'Cents end-to-end. Floating point never touches currency. Fee split is computed with deterministic rounding.'},
+  {n:'Time as truth', d:'timestamptz everywhere, IANA-zone normalized. ETA is model output stored, not recomputed per read.'},
+  {n:'History forever', d:'Immutable event-derived tables keep snapshots, so refunds and disputes always have an audit path.'},
+  {n:'Constraint-first', d:'Checks, FKs and exclusion rules enforce invariants in the DB — the last, most trusted line of defense.'}
+];
+
+const topology = [
+  {n:'01', t:'CloudFront + WAF', d:'Edge'},
+  {n:'02', t:'Next.js · Node runtime', d:'App Runner ×3'},
+  {n:'03', t:'API mesh · Envoy', d:'EKS cluster'},
+  {n:'04', t:'Order core services', d:'K8s · autoscaled'},
+  {n:'05', t:'Postgres primary + replicas', d:'Regional · RDS'},
+  {n:'06', t:'Kafka + Flink · ETA model', d:'Managed · us-east'}
+];
+
+/* ─── Render: trace ─── */
+document.getElementById('trace').innerHTML = trace.map(s => `
+  <a href="#database" aria-label="${s.t}" class="group rounded-[26px] p-6 border line card-soft transition hover:-translate-y-2 hover:border-[var(--ember)]" style="background:var(--paper)">
+    <span class="serif italic text-4xl group-hover:italic" style="color:var(--ember)">${s.n}</span>
+    <h3 class="serif text-2xl tracking-[-0.03em] mt-6 group-hover:underline decoration-[#E4572E] decoration-8 underline-offset-8">${s.t}</h3>
+    <p class="text-sm leading-6 text-[#5d615c] mt-3">${s.d}</p>
+    <span class="block mono text-xs uppercase tracking-[.3em] mt-6 text-[#8A9B8E] group-hover:translate-x-2 transition-transform">Inspect ↓</span>
+  </a>`).join('');
+
+/* ─── Render: steps factory ─── */
+function steps(sel, arr){
+  document.getElementById(sel).innerHTML = arr.map((s,i) => `
+    <article class="step-card group rounded-[26px] p-6 md:p-7 border line card-soft relative overflow-hidden flex flex-col" style="background:var(--paper)">
+      <span class="absolute right-5 top-5 mono text-[11px] uppercase tracking-[.25em] rounded-full pill px-3 py-1.5 text-[#6b6f6a] group-hover:border-[var(--ember)] group-hover:text-[var(--ember)] transition">${s.tag}</span>
+      <span class="serif italic text-[2.6rem] leading-none" style="color:var(--ember)">${s.n}</span>
+      <h3 class="serif text-[1.45rem] leading-[1.05] tracking-[-0.03em] mt-6 group-hover:italic decoration-[#F3B04C]">${s.title}</h3>
+      <p class="text-sm leading-6 text-[#5d615c] mt-4 flex-1">${s.body}</p>
+      <span class="inline-block mono text-xs uppercase tracking-[.3em] mt-7 pt-5 border-t line text-[#8A9B8E] group-hover:text-[var(--ember)] transition">${i < arr.length-1 ? 'Continue — next step below' : 'Hand off to module 02 ↓'}</span>
+    </article>`).join('');
+}
+steps('frontendSteps', feSteps);
+steps('backendSteps', beSteps);
+
+/* ─── Backend tabs ─── */
+const tabs = ['Read path','Write path','Async','Money'];
+document.getElementById('apiTabs').innerHTML = tabs.map((t,i)=>`
+  <button class="tabbtn ${i===0?'active':''} pill rounded-full px-5 py-3 text-xs md:text-sm font-semibold uppercase tracking-[.15em]" style="background:${i===0?'var(--ink)':'var(--paper)'}">${t}</button>`).join('');
+document.getElementById('apiTabs').addEventListener('click', e=>{
+  const b = e.target.closest('.tabbtn'); if(!b) return;
+  document.querySelectorAll('#apiTabs .tabbtn').forEach(x=>{ x.classList.remove('active'); x.style.background='var(--paper)'; x.style.color='var(--ink)'; });
+  b.classList.add('active'); b.style.background='var(--ink)'; b.style.color='var(--cream)';
+});
+
+/* ─── Event spine ─── */
+const events = [
+  ['order.placed','Producer: outbox relay, 0ms offset lag.','#E4572E'],
+  ['match.requested','Matcher picks nearest courier in ~180ms via S2 index.','#F3B04C'],
+  ['courier.assigned','Lease 30min in Redis, expiry-safe, dedup on event id.','#2E4034'],
+  ['handoff.confirmed','Doorbell + photo proof, ETA history written.','#8A9B8E']
+];
+document.getElementById('eventSpine').innerHTML = events.map((e,i)=>`
+  <button class="text-left rounded-[22px] border line p-5 transition hover:-translate-y-1 hover:border-[var(--ember)] flex gap-5 items-start" style="background:linear-gradient(180deg,#FFFDF9,#FAF6F1)">
+    <span class="mono text-xs rounded-full px-3 py-2 mt-1 text-[#FFF6EF]" style="background:${e[2]}">${String(i+1).padStart(2,'0')}</span>
+    <span>
+      <span class="block serif text-xl tracking-[-0.02em]">${e[0]}</span>
+      <span class="block text-sm text-[#5d615c] leading-5 mt-2">${e[1]}</span>
+    </span>
+  </button>`).join('');
+
+/* ─── Decision log ─── */
+const decisions = [
+  ['Why Zustand?','Cart mutations are local-first; server truth stays in React Query — no auth skew.'],
+  ['Why edge menus?','40k menu reads/min would melt the origin; ISR + stale-by-seconds is invisible to cooks.'],
+  ['Why no modal checkout?','Inline teardown keeps the ETA visible through payment — trust converts +18%.'],
+  ['Why photo proof?','Courier handoff closed by image + signature. Dispute rate −61%.']
+];
+document.getElementById('decisionLog').innerHTML = decisions.map(d=>`
+  <button class="text-left rounded-[22px] border border-white/10 p-5 transition hover:-translate-y-1" style="background:#ffffff0a">
+    <span class="block mono text-[11px] uppercase tracking-[.3em] text-[#F3B04C]">${d[0]}</span>
+    <span class="block serif text-xl text-[#FAF6F1] tracking-[-0.02em] mt-3 leading-snug">${d[1]}</span>
+  </button>`).join('');
+
+/* ─── Dishes ─── */
+const dishes = [
+  ['01','Sora','$18'],['02','Burnt crust','$22'],['03','Green mango','$14']
+];
+document.getElementById('dishRow').innerHTML = dishes.map(d=>`
+  <button class="rounded-[20px] border border-white/10 p-4 text-left transition hover:-translate-y-2 hover:border-[#F3B04C]" style="background:#ffffff08">
+    <span class="mono text-xs text-[#F3B04C]">${d[0]}</span>
+    <span class="serif text-lg text-[#FAF6F1] block mt-2 tracking-[-0.02em] leading-tight">${d[1]}</span>
+    <span class="mono text-sm text-[#8A9B8E] block mt-3">${d[2]}</span>
+  </button>`).join('');
+
+/* ─── Track button toggle ─── */
+document.getElementById('trackBtn').addEventListener('click', function(){
+  this.classList.toggle('glow');
+});
+
+/* ─── Schema render ─── */
+function renderSchema(filter){
+  const list = schema.filter(m => filter==='all' ? true : filter==='core' ? m.core : !m.core);
+  document.getElementById('schemaGrid').innerHTML = list.map(m=>`
+    <article class="schema-table rounded-[26px] border line card-soft overflow-hidden flex flex-col" style="background:var(--paper)">
+      <header class="flex items-center justify-between px-6 py-5 border-b line">
+        <h3 class="serif text-2xl tracking-[-0.03em]">${m.entity}<span class="mono text-xs align-middle ml-3 text-[#8A9B8E] uppercase tracking-[.25em]">table</span></h3>
+        ${m.core ? '<span class="mono text-[11px] uppercase tracking-[.25em] rounded-full px-3 py-1.5 text-[#FFF6EF]" style="background:linear-gradient(90deg,#E4572E,#F3B04C)">Core</span>' : '<span class="mono text-[11px] uppercase tracking-[.25em] rounded-full pill px-3 py-1.5 text-[#6b6f6a]">Extended</span>'}
+      </header>
+      <p class="px-6 pt-5 text-sm leading-6 text-[#5d615c]">${m.desc}</p>
+      <ul class="p-4 m-2 mt-4 flex-1">
+        ${m.cols.map(c=>`<li class="flex items-center justify-between gap-4 rounded-2xl px-4 py-3.5 border-b line last:border-b-0">
+          <code class="mono text-[13px] text-[#2E4034]">${c[0]}</code>
+          <span class="mono text-[11px] uppercase tracking-[.15em] text-[#B0602F] text-right">${c[1]}</span>
+        </li>`).join('')}
+      </ul>
+    </article>`).join('');
+}
+renderSchema('all');
+document.querySelectorAll('.dbpill').forEach(btn => btn.addEventListener('click', function(){
+  document.querySelectorAll('.dbpill').forEach(b=>{ b.classList.remove('glow'); b.style.background='var(--paper)'; b.style.color='var(--ink)'; });
+  this.classList.add('glow'); this.style.background='var(--ink)'; this.style.color='var(--cream)';
+  renderSchema(this.dataset.filter);
+}));
+
+/* ─── Rationale ─── */
+document.getElementById('rationale').innerHTML = why.map((w,i)=>`
+  <button class="text-left rounded-[22px] border line p-6 transition hover:-translate-y-1 hover:border-[var(--ember)]" style="background:linear-gradient(180deg,#FFFDF9,#FAF6F1)">
+    <span class="mono text-[11px] uppercase tracking-[.3em]" style="color:var(--ember)">Principle · ${String(i+1).padStart(2,'0')}</span>
+    <h4 class="serif text-2xl tracking-[-0.03em] mt-3">${w.n}</h4>
+    <p class="text-sm leading-6 text-[#5d615c] mt-3">${w.d}</p>
+  </button>`).join('');
+
+/* ─── Copy button ─── */
+document.getElementById('copyBtn').addEventListener('click', function(){
+  const old = this.textContent; this.textContent = 'Copied clipboard ✓';
+  setTimeout(()=> this.textContent = old, 1400);
+});
+
+/* ─── Topology ─── */
+document.getElementById('topology').innerHTML = topology.map(s=>`
+  <a href="#database" aria-label="${s.t}" class="group rounded-[24px] p-6 border border-white/20 backdrop-blur transition hover:-translate-y-3" style="background:rgba(20,18,16,.18)">
+    <span class="serif italic text-3xl text-[#FFF6EFcc]">${s.n}</span>
+    <h3 class="serif text-xl leading-tight tracking-[-0.02em] text-[#FFF6EF] mt-5">${s.t}</h3>
+    <p class="mono text-[11px] uppercase tracking-[.25em] text-[#141210aa] mt-4 group-hover:underline decoration-[#141210] decoration-4 underline-offset-8" style="color:#7C2D12">${s.d}</p>
+  </a>`).join('');
+</script>
+</body>
+</html>
